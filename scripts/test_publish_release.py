@@ -2,7 +2,9 @@ import base64
 import copy
 import hashlib
 import json
+import subprocess
 import unittest
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request
 
@@ -102,6 +104,60 @@ class PublisherTest(unittest.TestCase):
         with self.assertRaises(publisher.PublishError):
             self.metadata(certificates="Signer #1 certificate DN: CN=Android Debug, O=Android, C=US\n"
                           "Signer #1 certificate SHA-256 digest: " + CERTIFICATE)
+
+    def test_reads_scheme_and_sdk_signer_labels(self):
+        for label in ["V1 Signer:", "V2 Signer:", "V2 Signer #1:", "V3.0 Signer:",
+                      "V3.1 Signer:", "V4 Signer:",
+                      "Signer (minSdkVersion=33, maxSdkVersion=2147483647)"]:
+            with self.subTest(label=label):
+                certificates = ("Number of signers: 1\n" + label + " certificate DN: CN=NikApps\n"
+                                + label + " certificate SHA-256 digest: " + CERTIFICATE.upper())
+                self.assertEqual(self.metadata(certificates=certificates), METADATA)
+
+    def test_same_certificate_across_schemes_is_one_signing_identity(self):
+        certificates = ("Number of signers: 1\nV2 Signer: certificate SHA-256 digest: " + CERTIFICATE
+                        + "\nV3.0 Signer: certificate SHA-256 digest: " + CERTIFICATE.upper()
+                        + "\nSource Stamp Signer certificate SHA-256 digest: " + "c" * 64)
+        self.assertEqual(self.metadata(certificates=certificates), METADATA)
+
+    def test_rejects_debug_certificate_in_other_output_formats(self):
+        for label in ["V2 Signer:", "V3.0 Signer:",
+                      "Signer (minSdkVersion=33, maxSdkVersion=2147483647)"]:
+            with self.subTest(label=label), self.assertRaisesRegex(publisher.PublishError, "debug"):
+                self.metadata(certificates=label + " certificate DN: CN=Android Debug, O=Android, C=US\n"
+                              + label + " certificate SHA-256 digest: " + CERTIFICATE)
+
+    def test_rejects_missing_malformed_and_unknown_signing_certificates(self):
+        for certificates in ["Verifies\n", "Source Stamp Signer certificate SHA-256 digest: " + CERTIFICATE,
+                             "Signer #1 public key SHA-256 digest: " + CERTIFICATE,
+                             "V2 Signer: certificate SHA-256 digest: invalid",
+                             "Unknown Signer certificate SHA-256 digest: " + CERTIFICATE]:
+            with self.subTest(certificates=certificates), self.assertRaises(publisher.PublishError):
+                self.metadata(certificates=certificates)
+
+    def test_rejects_multiple_signers_and_rotated_certificates(self):
+        for certificates in [
+                "Signer #1 certificate SHA-256 digest: " + CERTIFICATE
+                + "\nSigner #2 certificate SHA-256 digest: " + "c" * 64,
+                "V3.0 Signer: certificate SHA-256 digest: " + CERTIFICATE
+                + "\nV3.1 Signer: certificate SHA-256 digest: " + "c" * 64,
+                "Number of signers: 2\nV2 Signer: certificate SHA-256 digest: " + CERTIFICATE]:
+            with self.subTest(certificates=certificates), self.assertRaises(publisher.PublishError):
+                self.metadata(certificates=certificates)
+
+    def test_failed_signature_verification_cannot_publish_even_with_certificate_output(self):
+        badging = "package: name='mk.jsp.live' versionCode='2' versionName='2.0.0'\nsdkVersion:'26'\n"
+        failed_verification = subprocess.CompletedProcess(
+            [], 1, "V2 Signer: certificate SHA-256 digest: " + CERTIFICATE, "DOES NOT VERIFY")
+        destination = FakeDestination()
+        with patch.object(publisher, "find_android_tool", side_effect=lambda name: name), \
+                patch.object(publisher.subprocess, "run", side_effect=[
+                    subprocess.CompletedProcess([], 0, badging, ""), failed_verification]):
+            with self.assertRaisesRegex(publisher.PublishError, "apksigner could not validate"):
+                publisher.publish(FakeSource(), destination, "emsNikac/JspTime", "emsNikac/NikStore",
+                                  RELEASE, CONFIG)
+        self.assertEqual(destination.uploads, 0)
+        self.assertEqual(destination.writes, 0)
 
     def test_rejects_unpublished_and_ambiguous_releases(self):
         for changes in [{"draft": True}, {"prerelease": True}, {"assets": []},

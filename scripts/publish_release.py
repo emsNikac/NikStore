@@ -26,6 +26,8 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 CATALOG_PATH = "distribution/catalog.json"
 ROOT = Path(__file__).resolve().parents[1]
+APK_SIGNER_LABEL = (r"(?:Signer #\d+|V[1-4](?:\.\d+)? Signer(?: #\d+)?:?"
+                    r"|Signer \(minSdkVersion=[^\r\n]+\))")
 
 
 class PublishError(Exception):
@@ -126,12 +128,25 @@ def parse_apk_metadata(badging, certificates, expected_package):
     if fields.get("name") != expected_package:
         raise PublishError("APK package does not match the registered application")
     if "application-debuggable" in badging.splitlines() or re.search(
-            r"^Signer #\d+ certificate DN:.*CN=Android Debug(?:,|$)", certificates, re.MULTILINE):
+            r"^" + APK_SIGNER_LABEL + r" certificate DN:.*CN=Android Debug(?:,|$)",
+            certificates, re.MULTILINE):
         raise PublishError("Publish a release-signed APK, not an Android debug build")
-    signers = re.findall(r"^Signer #\d+ certificate SHA-256 digest: ([a-fA-F0-9]{64})$",
-                         certificates, re.MULTILINE)
-    if len(signers) != 1:
-        raise PublishError("Expected one verified APK signing certificate")
+    certificate_lines = re.findall(r"^(.+?) certificate SHA-256 digest: (.*)$",
+                                   certificates, re.MULTILINE)
+    signers = set()
+    for label, digest in certificate_lines:
+        # A source stamp identifies the distributor, not the APK's signing key.
+        if label == "Source Stamp Signer":
+            continue
+        if not re.fullmatch(APK_SIGNER_LABEL, label) or not re.fullmatch(r"[a-fA-F0-9]{64}", digest):
+            raise PublishError("Unrecognized apksigner certificate output for {!r}".format(label))
+        # Newer tools may print the same certificate for multiple signature schemes.
+        signers.add(digest.lower())
+    counts = re.findall(r"^Number of signers: (\d+)$", certificates, re.MULTILINE)
+    if len(signers) != 1 or any(int(count) != 1 for count in counts):
+        raise PublishError("Expected one verified APK signing certificate; found {} distinct "
+                           "certificates (apksigner counts: {})".format(
+                               len(signers), ", ".join(counts) or "not reported"))
     try:
         low = int(fields["versionCode"])
         major = int(fields.get("versionCodeMajor", "0"))
@@ -144,7 +159,7 @@ def parse_apk_metadata(badging, certificates, expected_package):
         raise PublishError("Invalid APK version metadata")
     return {"packageName": expected_package, "versionName": version_name,
             "versionCode": version_code, "minSdk": min_sdk,
-            "signingCertificateSha256": signers[0].lower()}
+            "signingCertificateSha256": next(iter(signers))}
 
 
 def select_asset(release, asset_name=""):
@@ -262,7 +277,8 @@ def publish(source, destination, source_repository, destination_repository, rele
         if inspect is None:
             metadata = parse_apk_metadata(
                 tool_output("aapt", "dump", "badging", apk),
-                tool_output("apksigner", "verify", "--print-certs", apk), config["packageName"])
+                tool_output("apksigner", "verify", "--verbose", "--print-certs", apk),
+                config["packageName"])
         else:
             metadata = inspect(apk)
         digest = sha256(apk)
