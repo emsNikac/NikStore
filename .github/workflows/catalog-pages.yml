@@ -1,0 +1,41 @@
+name: Publish NikStore catalog
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - distribution/catalog.json
+      - distribution/index.html
+      - .github/workflows/catalog-pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: catalog-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Prepare the public catalog
+        run: |
+          python3 -B -c 'import json; from pathlib import Path; catalog = json.loads(Path("distribution/catalog.json").read_text()); assert catalog["schemaVersion"] == 1 and isinstance(catalog["apps"], list)'
+          mkdir -p _site
+          cp distribution/catalog.json distribution/index.html _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Publish catalog
+        id: deployment
+        uses: actions/deploy-pages@v4

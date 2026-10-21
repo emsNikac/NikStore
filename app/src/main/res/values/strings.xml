@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">NikStore</string>
+    <string name="catalog_subtitle">Your apps, latest releases.</string>
+    <string name="refresh">Refresh</string>
+    <string name="catalog_refreshing">Checking for new releases…</string>
+    <string name="catalog_current">Latest releases checked. Refreshes every minute while open.</string>
+    <string name="catalog_empty">No apps published yet. Your first release will appear here.</string>
+    <string name="catalog_not_published">The app catalog is not published yet. Enable GitHub Pages, then tap Refresh.</string>
+    <string name="catalog_offline">Could not refresh. Showing the saved catalog; tap Refresh to try again.</string>
+    <string name="catalog_error">Could not load the app catalog. Check your connection and try Refresh.</string>
+    <string name="available_version">Available: %1$s · build %2$d</string>
+    <string name="installed_version">Installed: %1$s · build %2$d</string>
+    <string name="app_not_installed">Not installed on this device</string>
+    <string name="app_available">Available</string>
+    <string name="app_update_available">Update available</string>
+    <string name="app_up_to_date">Up to date</string>
+    <string name="app_newer_installed">Newer version installed</string>
+    <string name="app_incompatible">Requires Android API %1$d or higher</string>
+</resources>

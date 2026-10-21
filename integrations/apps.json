@@ -1,0 +1,8 @@
+{
+  "emsNikac/JspTime": {
+    "id": "jsptime",
+    "packageName": "mk.jsp.live",
+    "name": "JspTime",
+    "description": "An unofficial, ad-free Android app for Skopje public transport, with live buses, stations, and arrival estimates."
+  }
+}

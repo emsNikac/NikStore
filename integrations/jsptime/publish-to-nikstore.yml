@@ -1,0 +1,40 @@
+# Install this file as .github/workflows/publish-to-nikstore.yml in private JspTime.
+name: Publish JspTime to NikStore
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing stable JspTime release tag to publish or retry
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-jsptime-to-nikstore
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Read the publisher from NikStore
+        uses: actions/checkout@v7
+        with:
+          repository: emsNikac/NikStore
+          ref: main
+          path: nikstore
+          persist-credentials: false
+      - name: Mirror signed APK and update the catalog
+        working-directory: nikstore
+        env:
+          SOURCE_GITHUB_TOKEN: ${{ github.token }}
+          NIKSTORE_TOKEN: ${{ secrets.NIKSTORE_PUBLISH_TOKEN }}
+          NIKSTORE_APK_ASSET: ${{ vars.NIKSTORE_APK_ASSET }}
+        run: python3 -B scripts/publish_release.py --destination emsNikac/NikStore
