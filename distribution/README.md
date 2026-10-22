@@ -31,9 +31,14 @@ version is available, or **Open** when the installed version is current or newer
 The first installation asks the user to allow NikStore under Android's **Allow
 from this source** setting. Android then presents its normal confirmation screen.
 
-Downloads are user initiated and show progress with a Cancel button. They can
-continue when the screen is closed; completed downloads can be installed on
-return. Downloading remains available when release notifications are disabled.
+Downloads are user initiated and show progress with a Cancel button. They run
+as foreground transfers with a separate progress notification and continue when
+NikStore is sent to Home, Recents, or the screen is locked. The notification opens
+the app or cancels the download. Completed downloads can be installed on return.
+Queued transfers show **Preparing download** while online; **Waiting for a
+connection** is reserved for an unavailable network. Downloading remains available
+when release notifications are disabled; the download notification is independent
+of the optional daily release alerts.
 No APKs are automatically downloaded or silently installed by the nightly check.
 
 Before opening the installer, NikStore checks the downloaded APK's SHA-256,

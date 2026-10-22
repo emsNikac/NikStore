@@ -17,8 +17,8 @@ android {
         applicationId = "com.nikac.nikstore"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.3.0"
+        versionCode = 5
+        versionName = "1.3.1"
         buildConfigField("String", "CATALOG_URL", "\"${catalogUrl.get().replace("\\", "\\\\").replace("\"", "\\\"")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

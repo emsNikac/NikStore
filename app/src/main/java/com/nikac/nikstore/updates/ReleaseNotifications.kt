@@ -78,5 +78,11 @@ object ReleaseNotifications {
         }
     }
 
-    fun clear(context: Context) = NotificationManagerCompat.from(context).cancelAll()
+    fun clear(context: Context) {
+        // Release-alert preferences must not remove an active download's foreground notification.
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.activeNotifications.filter { it.tag?.startsWith("release:") == true }.forEach {
+            manager.cancel(it.tag, it.id)
+        }
+    }
 }

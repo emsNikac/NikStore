@@ -58,6 +58,10 @@
     <string name="install_downloading">Downloading…</string>
     <string name="install_verifying">Checking APK…</string>
     <string name="install_waiting">Waiting for a connection…</string>
+    <string name="install_queued">Preparing download…</string>
+    <string name="download_channel_name">App downloads</string>
+    <string name="download_channel_description">Progress of app downloads you start in NikStore.</string>
+    <string name="download_notification_title">Downloading %1$s</string>
     <string name="install_download_percent">Downloading… %1$d%%</string>
     <string name="install_download_ready">Download ready. Tap Install or Update to continue.</string>
     <string name="install_permission_title">Allow NikStore to install apps</string>

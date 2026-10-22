@@ -3,6 +3,8 @@ package com.nikac.nikstore.install
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -107,7 +109,9 @@ class AppInstallController(
         }
         val bytes = work?.progress?.getLong(ApkDownloads.BYTES, 0) ?: 0
         val total = work?.progress?.getLong(ApkDownloads.TOTAL, -1) ?: -1
-        val verifying = checking || work?.progress?.getBoolean(ApkDownloads.VERIFYING, false) == true
+        val stage = downloadStatus(work?.state, connected = isConnected(), checking = checking,
+            verifying = work?.progress?.getBoolean(ApkDownloads.VERIFYING, false) == true, ready = ready)
+        val verifying = stage == DownloadStatus.VERIFYING
         val indeterminate = total <= 0 || verifying
         if (progress.isIndeterminate != indeterminate) {
             progress.visibility = View.INVISIBLE
@@ -118,7 +122,8 @@ class AppInstallController(
         val text = when {
             installed || state == AppState.INCOMPATIBLE -> null
             verifying -> activity.getString(R.string.install_verifying)
-            downloading && work?.state != WorkInfo.State.RUNNING -> activity.getString(R.string.install_waiting)
+            stage == DownloadStatus.WAITING_FOR_NETWORK -> activity.getString(R.string.install_waiting)
+            stage == DownloadStatus.QUEUED -> activity.getString(R.string.install_queued)
             downloading && total > 0 -> activity.getString(R.string.install_download_percent, bytes * 100 / total)
             downloading -> activity.getString(R.string.install_downloading)
             ready -> activity.getString(R.string.install_download_ready)
@@ -154,6 +159,13 @@ class AppInstallController(
     }
 
     private fun canInstall() = Build.VERSION.SDK_INT < 26 || activity.packageManager.canRequestPackageInstalls()
+
+    private fun isConnected(): Boolean {
+        val manager = activity.getSystemService(ConnectivityManager::class.java)
+        val capabilities = manager.getNetworkCapabilities(manager.activeNetwork) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            (Build.VERSION.SDK_INT < 26 || capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+    }
 
     private fun request(app: CatalogApp) {
         if (!canInstall()) {
