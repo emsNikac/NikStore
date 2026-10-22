@@ -58,6 +58,10 @@ class FakeDestination:
             return copy.deepcopy(self.release)
         if method == "PATCH" and path == prefix + "/releases/30":
             self.release.update(payload)
+            if not self.release["draft"]:
+                for asset in self.release["assets"]:
+                    asset["browser_download_url"] = (
+                        "https://github.com/emsNikac/NikStore/releases/download/jsptime-2/" + asset["name"])
             return copy.deepcopy(self.release)
         if method == "PUT" and path == prefix + "/contents/distribution/catalog.json":
             if self.release is not None and self.release["draft"]:
@@ -74,7 +78,8 @@ class FakeDestination:
     def upload(self, upload_url, apk, name):
         self.uploads += 1
         asset = {"id": 40, "name": name, "digest": "sha256:" + hashlib.sha256(apk.read_bytes()).hexdigest(),
-                 "browser_download_url": "https://github.com/emsNikac/NikStore/releases/download/jsptime-2/" + name}
+                 "browser_download_url": "https://github.com/emsNikac/NikStore/releases/download/" +
+                 ("untagged-draft" if self.release["draft"] else "jsptime-2") + "/" + name}
         self.release["assets"].append(asset)
         return copy.deepcopy(asset)
 
@@ -175,6 +180,7 @@ class PublisherTest(unittest.TestCase):
         destination = FakeDestination()
         self.publish(destination)
         self.assertFalse(destination.release["draft"])
+        self.assertEqual(destination.catalog["apps"][0]["apkUrl"], app_entry()["apkUrl"])
         self.assertEqual(destination.catalog["apps"], [app_entry()])
         self.publish(destination)
         self.assertEqual(destination.uploads, 1)

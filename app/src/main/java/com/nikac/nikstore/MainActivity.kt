@@ -1,6 +1,9 @@
 package com.nikac.nikstore
 
 import android.content.Intent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
@@ -29,6 +32,7 @@ import com.nikac.nikstore.catalog.AppState
 import com.nikac.nikstore.catalog.CatalogApp
 import com.nikac.nikstore.catalog.CatalogRepository
 import com.nikac.nikstore.catalog.CatalogUnavailableException
+import com.nikac.nikstore.install.AppInstallController
 import com.nikac.nikstore.updates.DailyReleaseScheduler
 import com.nikac.nikstore.updates.ReleaseNotifications
 import com.nikac.nikstore.updates.ReleaseSettings
@@ -40,6 +44,7 @@ class MainActivity : AppCompatActivity() {
     private val expandedApps = mutableSetOf<String>()
     private lateinit var repository: CatalogRepository
     private lateinit var releaseSettings: ReleaseSettings
+    private lateinit var installations: AppInstallController
     private lateinit var cards: LinearLayout
     private lateinit var status: TextView
     private lateinit var count: TextView
@@ -51,6 +56,11 @@ class MainActivity : AppCompatActivity() {
     private var cacheLoaded = false
     private var apps: List<CatalogApp>? = null
     private var loadError: Int? = null
+    private val packageChanges = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (apps.orEmpty().any { it.packageName == intent.data?.schemeSpecificPart }) loadCachedCatalog()
+        }
+    }
     private val catalogChanges = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == ReleaseSettings.LAST_CATALOG_CHECK) {
             runOnUiThread { if (!refreshing && !isDestroyed) loadCachedCatalog() }
@@ -83,6 +93,8 @@ class MainActivity : AppCompatActivity() {
         refreshButton = findViewById(R.id.refresh_button)
         retryButton = findViewById(R.id.retry_button)
         progress = findViewById(R.id.catalog_progress)
+        installations = AppInstallController(this, worker, savedInstanceState,
+            controlsChanged = ::updateInstallControls, installedChanged = ::loadCachedCatalog)
         refreshButton.setOnClickListener { refresh() }
         retryButton.setOnClickListener { refresh() }
         findViewById<MaterialButton>(R.id.settings_button).apply {
@@ -95,6 +107,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putStringArrayList(EXPANDED_APPS, ArrayList(expandedApps))
+        installations.saveState(outState)
         super.onSaveInstanceState(outState)
     }
 
@@ -103,15 +116,29 @@ class MainActivity : AppCompatActivity() {
         if (releaseSettings.enabled && !ReleaseNotifications.allowed(this)) DailyReleaseScheduler.disable(this)
         DailyReleaseScheduler.sync(this)
         loadCachedCatalog()
+        installations.resume()
+    }
+
+    override fun onPause() {
+        installations.pause()
+        super.onPause()
     }
 
     override fun onStart() {
         super.onStart()
         releaseSettings.preferences.registerOnSharedPreferenceChangeListener(catalogChanges)
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REPLACED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addDataScheme("package")
+        }
+        ContextCompat.registerReceiver(this, packageChanges, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     override fun onStop() {
         releaseSettings.preferences.unregisterOnSharedPreferenceChangeListener(catalogChanges)
+        unregisterReceiver(packageChanges)
         super.onStop()
     }
 
@@ -284,6 +311,7 @@ class MainActivity : AppCompatActivity() {
                 visibility = if (icon == null) View.VISIBLE else View.GONE
             }
             bindAppState(card.findViewById(R.id.card_state), app.state(installedCode, Build.VERSION.SDK_INT))
+            installations.bind(card, app, installedCode)
             val versions = resources.getStringArray(R.array.android_version_names)
             val androidVersion = versions.getOrNull(app.minSdk - Build.VERSION_CODES.N)
                 ?: getString(R.string.android_api_version, app.minSdk)
@@ -318,6 +346,18 @@ class MainActivity : AppCompatActivity() {
                 card.post { findViewById<NestedScrollView>(R.id.catalog_scroll).smoothScrollTo(0, card.top) }
                 intent.removeExtra(ReleaseNotifications.EXTRA_PACKAGE)
             }
+        }
+        installations.continuePendingInstall()
+    }
+
+    private fun updateInstallControls() {
+        apps.orEmpty().forEachIndexed { index, app ->
+            val card = cards.getChildAt(index) ?: return@forEachIndexed
+            val installedCode = try {
+                @Suppress("DEPRECATION")
+                PackageInfoCompat.getLongVersionCode(packageManager.getPackageInfo(app.packageName, 0))
+            } catch (_: PackageManager.NameNotFoundException) { null }
+            installations.bind(card, app, installedCode)
         }
     }
 

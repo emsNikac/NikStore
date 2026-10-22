@@ -285,8 +285,13 @@ def mirror_release(github, repository, app_config, metadata, source_release, apk
                 if sha256(previous) != digest:
                     raise PublishError("The mirrored version already contains a different APK")
     if release.get("draft"):
-        github.request("PATCH", prefix + "/releases/" + str(release["id"]),
-                       {"draft": False, "make_latest": "false"})
+        release = github.request("PATCH", prefix + "/releases/" + str(release["id"]),
+                                 {"draft": False, "make_latest": "false"})
+        # Draft uploads can have temporary untagged URLs. Publishing replaces
+        # those URLs, so use the asset returned with the published release.
+        asset = next((item for item in release.get("assets", []) if item["name"] == filename), None)
+        if asset is None:
+            raise PublishError("The published release is missing its APK asset")
     return asset["browser_download_url"]
 
 

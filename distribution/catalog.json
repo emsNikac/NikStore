@@ -9,7 +9,7 @@
       "signingCertificateSha256": "cd6e36e6bffdf9d4b1580c236cecaf1f8163b788d4727303d6e9bfdacbef688f",
       "name": "JspTime",
       "description": "An unofficial, ad-free Android app for Skopje public transport, with live buses, stations, and arrival estimates.",
-      "apkUrl": "https://github.com/emsNikac/NikStore/releases/download/untagged-4757eacdcb369714b7fc/jsptime-2.apk",
+      "apkUrl": "https://github.com/emsNikac/NikStore/releases/download/jsptime-2/jsptime-2.apk",
       "sha256": "aaf56620037d04e6acb29394fe6ba7e5dd869bd9ddf4d6fc124ab5bb83f19286",
       "releaseNotes": "JspTime 2.0.0\r\n\r\n- Live bus locations and station arrival estimates.\r\n- Signed Android release build for NikStore distribution.",
       "publishedAt": "2026-10-21T23:29:26Z",

@@ -61,4 +61,19 @@ class CatalogTest {
     @Test fun acceptsEmptyCatalog() {
         assertEquals(emptyList<CatalogApp>(), CatalogParser.parse("""{"schemaVersion":1,"apps":[]}"""))
     }
+
+    @Test fun readsOptionalInstallMetadata() {
+        val root = JSONObject(release)
+        root.getJSONArray("apps").getJSONObject(0).put("signingCertificateSha256", "b".repeat(64)).put("sizeBytes", 1234)
+        val app = CatalogParser.parse(root.toString()).single()
+        assertEquals("b".repeat(64), app.signingCertificateSha256)
+        assertEquals(1234L, app.sizeBytes)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsInvalidSigningCertificate() {
+        val root = JSONObject(release)
+        root.getJSONArray("apps").getJSONObject(0).put("signingCertificateSha256", "invalid")
+        CatalogParser.parse(root.toString())
+    }
 }

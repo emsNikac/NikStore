@@ -21,7 +21,33 @@ The release connection works as follows:
    It shows available and installed versions, update status, and release notes.
    A valid catalog is saved for offline use.
 
-APK installation and push messaging are subsequent features.
+NikStore can also download and install these APKs. Push messaging is a subsequent
+feature.
+
+## Installing and updating apps
+
+Each compatible app has an **Install** button, an **Update** button when a newer
+version is available, or **Open** when the installed version is current or newer.
+The first installation asks the user to allow NikStore under Android's **Allow
+from this source** setting. Android then presents its normal confirmation screen.
+
+Downloads are user initiated and show progress with a Cancel button. They can
+continue when the screen is closed; completed downloads can be installed on
+return. Downloading remains available when release notifications are disabled.
+No APKs are automatically downloaded or silently installed by the nightly check.
+
+Before opening the installer, NikStore checks the downloaded APK's SHA-256,
+expected size, package name, version code, Android requirement, and signing
+certificate. An update must use the same signing certificate as the installed
+app. Debug builds, downgrades, and mismatched APKs are rejected. Currently the
+store accepts single universal release APKs up to 512 MB; split APK bundles are
+not supported.
+
+APKs stay in the app's private cache and are shared with Android's installer
+through a temporary read grant. Failed partial downloads are removed, installed
+APKs are cleaned up when the catalog screen sees the installed version, and
+unused completed downloads expire after seven days. Canceling Android's installer
+keeps the verified download available for another attempt.
 
 ## Daily release notifications
 

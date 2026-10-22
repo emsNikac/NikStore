@@ -13,6 +13,8 @@ data class CatalogApp(
     val apkUrl: String,
     val sha256: String,
     val releaseNotes: String,
+    val signingCertificateSha256: String? = null,
+    val sizeBytes: Long = 0,
 ) {
     fun state(installedVersionCode: Long?, deviceSdk: Int): AppState = when {
         deviceSdk < minSdk -> AppState.INCOMPATIBLE
@@ -43,6 +45,8 @@ object CatalogParser {
                 apkUrl = entry.requiredText("apkUrl"),
                 sha256 = entry.requiredText("sha256"),
                 releaseNotes = entry.optString("releaseNotes", ""),
+                signingCertificateSha256 = entry.optString("signingCertificateSha256", "").takeIf { it.isNotEmpty() },
+                sizeBytes = entry.optLong("sizeBytes", 0),
             )
             require(app.packageName.matches(Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+"))) {
                 "Invalid package name"
@@ -51,6 +55,9 @@ object CatalogParser {
             require(app.versionCode > 0 && app.minSdk > 0) { "Invalid Android version" }
             requireHttpsUrl(app.apkUrl)
             require(app.sha256.matches(Regex("[a-fA-F0-9]{64}"))) { "Invalid APK checksum" }
+            require(app.signingCertificateSha256 == null ||
+                app.signingCertificateSha256.matches(Regex("[a-fA-F0-9]{64}"))) { "Invalid signing certificate" }
+            require(app.sizeBytes >= 0) { "Invalid APK size" }
             app
         }
     }
