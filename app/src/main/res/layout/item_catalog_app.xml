@@ -4,50 +4,148 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="16dp"
-    app:cardCornerRadius="16dp"
+    app:cardBackgroundColor="@color/store_surface"
+    app:cardCornerRadius="24dp"
     app:cardElevation="0dp"
+    app:strokeColor="@color/store_outline"
     app:strokeWidth="1dp">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="20dp"
         android:orientation="vertical">
-        <TextView
-            android:id="@+id/card_name"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceHeadline6" />
+            android:orientation="horizontal"
+            android:baselineAligned="false"
+            android:gravity="top">
+            <FrameLayout
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginEnd="14dp"
+                android:background="@drawable/bg_app_icon"
+                android:importantForAccessibility="noHideDescendants">
+                <TextView
+                    android:id="@+id/card_initial"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:textColor="@color/store_on_primary_container"
+                    android:textSize="26sp"
+                    android:fontFamily="sans-serif-medium" />
+                <ImageView
+                    android:id="@+id/card_icon"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="4dp"
+                    android:contentDescription="@null"
+                    android:scaleType="fitCenter"
+                    android:visibility="gone" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:id="@+id/card_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/store_text"
+                    android:textSize="20sp"
+                    android:fontFamily="sans-serif-medium" />
+                <TextView
+                    android:id="@+id/card_version"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/store_text_secondary"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
         <TextView
             android:id="@+id/card_description"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textAppearance="?attr/textAppearanceBody2" />
-        <TextView
-            android:id="@+id/card_version"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:textAppearance="?attr/textAppearanceBody1" />
-        <TextView
-            android:id="@+id/card_installed"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textAppearance="?attr/textAppearanceBody2" />
+            android:textColor="@color/store_text_secondary"
+            android:textSize="14sp"
+            android:lineSpacingExtra="3dp" />
         <TextView
             android:id="@+id/card_state"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textStyle="bold"
-            android:textColor="?attr/colorPrimary"
-            android:textAppearance="?attr/textAppearanceBody1" />
-        <TextView
-            android:id="@+id/card_notes"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:textAppearance="?attr/textAppearanceBody2" />
+            android:background="@drawable/bg_status_badge"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/card_details_button"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="48dp"
+            android:gravity="start|center_vertical"
+            android:paddingStart="0dp"
+            android:paddingEnd="0dp"
+            android:text="@string/release_details"
+            android:textAlignment="viewStart"
+            app:icon="@drawable/ic_expand_more"
+            app:iconSize="20dp"
+            app:iconGravity="end" />
+        <LinearLayout
+            android:id="@+id/card_details"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="16dp"
+                android:background="@color/store_outline" />
+            <TextView
+                android:id="@+id/card_build"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/store_text"
+                android:textSize="14sp" />
+            <TextView
+                android:id="@+id/card_installed"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/store_text_secondary"
+                android:textSize="13sp" />
+            <TextView
+                android:id="@+id/card_requirement"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/store_text_secondary"
+                android:textSize="13sp" />
+            <TextView
+                android:id="@+id/card_notes_heading"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/whats_new"
+                android:textColor="@color/store_text"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium" />
+            <TextView
+                android:id="@+id/card_notes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/store_text_secondary"
+                android:textSize="14sp"
+                android:lineSpacingExtra="4dp" />
+        </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

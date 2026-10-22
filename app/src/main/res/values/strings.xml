@@ -1,19 +1,45 @@
 <resources>
     <string name="app_name">NikStore</string>
-    <string name="catalog_subtitle">Your apps, latest releases.</string>
-    <string name="refresh">Refresh</string>
-    <string name="catalog_refreshing">Checking for new releases…</string>
-    <string name="catalog_current">Latest releases checked. Refreshes every minute while open.</string>
-    <string name="catalog_empty">No apps published yet. Your first release will appear here.</string>
-    <string name="catalog_not_published">The app catalog is not published yet. Enable GitHub Pages, then tap Refresh.</string>
-    <string name="catalog_offline">Could not refresh. Showing the saved catalog; tap Refresh to try again.</string>
-    <string name="catalog_error">Could not load the app catalog. Check your connection and try Refresh.</string>
-    <string name="available_version">Available: %1$s · build %2$d</string>
+    <string name="catalog_subtitle">Your apps. Always current.</string>
+    <string name="catalog_heading">Your collection</string>
+    <string name="refresh">Check for updates</string>
+    <string name="retry">Retry</string>
+    <string name="catalog_refreshing">Checking for updates…</string>
+    <string name="catalog_current">Checked just now</string>
+    <string name="catalog_saved">Showing your saved collection</string>
+    <string name="catalog_empty_title">Your collection starts here</string>
+    <string name="catalog_loading_title">Loading your collection</string>
+    <string name="catalog_empty">New apps will appear here as they’re published.</string>
+    <string name="catalog_loading">Finding the latest releases for you.</string>
+    <string name="catalog_not_published">The catalog isn’t available yet. Try again shortly.</string>
+    <string name="catalog_offline">Couldn’t refresh. Showing your saved collection.</string>
+    <string name="catalog_error">Couldn’t load your apps. Check your connection and try again.</string>
+    <string name="catalog_error_title">Let’s try that again</string>
+    <string name="available_version">Version %1$s</string>
     <string name="installed_version">Installed: %1$s · build %2$d</string>
     <string name="app_not_installed">Not installed on this device</string>
     <string name="app_available">Available</string>
     <string name="app_update_available">Update available</string>
     <string name="app_up_to_date">Up to date</string>
     <string name="app_newer_installed">Newer version installed</string>
-    <string name="app_incompatible">Requires Android API %1$d or higher</string>
+    <string name="app_incompatible">Not compatible with this device</string>
+    <string name="release_details">Release details</string>
+    <string name="hide_details">Hide details</string>
+    <string name="show_details_for">Show release details for %1$s</string>
+    <string name="hide_details_for">Hide release details for %1$s</string>
+    <string name="details_expanded">Expanded</string>
+    <string name="details_collapsed">Collapsed</string>
+    <string name="release_build">Version %1$s · build %2$d</string>
+    <string name="android_requirement">Requires Android %1$s or later</string>
+    <string name="android_api_version">API %1$d</string>
+    <string name="whats_new">What’s new</string>
+    <plurals name="catalog_app_count">
+        <item quantity="one">%d app</item>
+        <item quantity="other">%d apps</item>
+    </plurals>
+    <string-array name="android_version_names">
+        <item>7.0</item><item>7.1</item><item>8.0</item><item>8.1</item>
+        <item>9</item><item>10</item><item>11</item><item>12</item><item>12L</item>
+        <item>13</item><item>14</item><item>15</item><item>16</item>
+    </string-array>
 </resources>

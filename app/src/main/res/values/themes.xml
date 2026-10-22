@@ -1,16 +1,26 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.NikStore" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+<resources>
+    <style name="Theme.NikStore" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/store_primary</item>
+        <item name="colorOnPrimary">@color/store_on_primary</item>
+        <item name="colorPrimaryContainer">@color/store_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/store_on_primary_container</item>
+        <item name="colorSecondary">@color/store_primary</item>
+        <item name="colorOnSecondary">@color/store_on_primary</item>
+        <item name="colorSecondaryContainer">@color/store_surface_variant</item>
+        <item name="colorOnSecondaryContainer">@color/store_text</item>
+        <item name="android:colorBackground">@color/store_background</item>
+        <item name="colorOnBackground">@color/store_text</item>
+        <item name="colorSurface">@color/store_surface</item>
+        <item name="colorOnSurface">@color/store_text</item>
+        <item name="colorSurfaceVariant">@color/store_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/store_text_secondary</item>
+        <item name="colorOutline">@color/store_outline</item>
+        <item name="colorOutlineVariant">@color/store_outline</item>
+        <item name="colorError">@color/store_error</item>
+        <item name="colorErrorContainer">@color/store_error_container</item>
+        <item name="colorOnErrorContainer">@color/store_error</item>
+        <item name="android:windowBackground">@color/store_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:fontFamily">sans</item>
     </style>
 </resources>

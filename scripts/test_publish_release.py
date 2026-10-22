@@ -1,6 +1,7 @@
 import base64
 import copy
 import hashlib
+import io
 import json
 import subprocess
 import unittest
@@ -239,6 +240,59 @@ class PublisherTest(unittest.TestCase):
         destination.catalog["apps"] = [app_entry(), app_entry()]
         with self.assertRaises(publisher.PublishError):
             publisher.read_catalog(destination, "emsNikac/NikStore", "main")
+
+
+class GitHubErrorTest(unittest.TestCase):
+    def client(self, body=None, code=403):
+        client = publisher.GitHub("test-secret", "NIKSTORE_PUBLISH_TOKEN")
+        error = HTTPError("https://redirect.example/apk?signature=private-value", code, "Forbidden",
+                          {"X-Accepted-GitHub-Permissions": "contents=write"},
+                          io.BytesIO(body or b'{"message":"Resource not accessible by personal access token"}'))
+        client.opener = unittest.mock.Mock()
+        client.opener.open.side_effect = error
+        return client
+
+    def test_rejected_operations_identify_request_and_credential_without_signed_urls(self):
+        with publisher.tempfile.TemporaryDirectory(prefix=".nikstore-test-", dir=publisher.Path.cwd()) as directory:
+            apk = publisher.Path(directory) / "release.apk"
+            apk.write_bytes(APK)
+            for operation, expected in [
+                    (lambda client: client.request("POST", "/repos/emsNikac/NikStore/releases", {}),
+                     "POST /repos/emsNikac/NikStore/releases"),
+                    (lambda client: client.request("PUT", "/repos/emsNikac/NikStore/contents/distribution/catalog.json", {}),
+                     "PUT /repos/emsNikac/NikStore/contents/distribution/catalog.json"),
+                    (lambda client: client.upload("https://uploads.github.com/repos/emsNikac/NikStore/releases/30/assets{?name}",
+                                                  apk, "release.apk"),
+                     "POST /repos/emsNikac/NikStore/releases/30/assets"),
+                    (lambda client: client.download(20, "emsNikac/JspTime", apk),
+                     "GET /repos/emsNikac/JspTime/releases/assets/20")]:
+                with self.subTest(operation=expected), self.assertRaises(HTTPError) as raised:
+                    operation(self.client())
+                message = raised.exception.nikstore_message
+                for text in (expected, "HTTP 403", "NIKSTORE_PUBLISH_TOKEN",
+                             "Resource not accessible by personal access token", "contents=write"):
+                    self.assertIn(text, message)
+                for text in ("test-secret", "signature", "private-value", "redirect.example"):
+                    self.assertNotIn(text, message)
+
+    def test_error_messages_redact_credentials_and_ignore_non_json(self):
+        with patch.dict(publisher.os.environ, {"SOURCE_GITHUB_TOKEN": "source-secret"}):
+            client = self.client(json.dumps({"message": "test-secret source-secret github_pat_other_secret"}).encode())
+            with self.assertRaises(HTTPError) as raised:
+                client.request("POST", "/repos/emsNikac/NikStore/releases", {})
+            for text in ("test-secret", "source-secret", "github_pat_other_secret"):
+                self.assertNotIn(text, raised.exception.nikstore_message)
+            self.assertIn("[REDACTED]", raised.exception.nikstore_message)
+        with self.assertRaises(HTTPError) as raised:
+            self.client(b"<html>private response body</html>").request("POST", "/repos/emsNikac/NikStore/releases", {})
+        self.assertNotIn("private response body", raised.exception.nikstore_message)
+
+    def test_missing_release_and_conflicts_keep_existing_http_error_behavior(self):
+        self.assertIsNone(self.client(code=404).request("GET", "/repos/emsNikac/NikStore/releases/tags/jsptime-2",
+                                                     allow_missing=True))
+        with self.assertRaises(HTTPError) as raised:
+            self.client(code=409).request("PUT", "/repos/emsNikac/NikStore/contents/distribution/catalog.json", {})
+        self.assertEqual(raised.exception.code, 409)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="store_primary">#83D5C2</color>
+    <color name="store_on_primary">#00382F</color>
+    <color name="store_primary_container">#174C42</color>
+    <color name="store_on_primary_container">#AEF0DD</color>
+    <color name="store_background">#0D1716</color>
+    <color name="store_surface">#162623</color>
+    <color name="store_surface_variant">#223732</color>
+    <color name="store_text">#E3F0EB</color>
+    <color name="store_text_secondary">#ABBFBA</color>
+    <color name="store_outline">#334842</color>
+    <color name="store_success">#A2DCB4</color>
+    <color name="store_success_container">#193B2A</color>
+    <color name="store_update">#F6D083</color>
+    <color name="store_update_container">#463518</color>
+    <color name="store_neutral">#BECFC7</color>
+    <color name="store_neutral_container">#293A35</color>
+    <color name="store_error">#FFB4A9</color>
+    <color name="store_error_container">#482521</color>
+</resources>

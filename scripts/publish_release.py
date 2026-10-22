@@ -45,11 +45,35 @@ class SafeRedirectHandler(HTTPRedirectHandler):
 
 
 class GitHub:
-    def __init__(self, token):
+    def __init__(self, token, credential_name="GitHub token"):
         if not token:
             raise PublishError("A required GitHub Actions secret is missing")
         self.token = token
+        self.credential_name = credential_name
         self.opener = build_opener(SafeRedirectHandler())
+
+    def record_http_error(self, error, method, url):
+        # Report the original API operation, never redirect URLs, payloads, or headers
+        # containing credentials. Keep HTTPError intact for catalog conflict retries.
+        detail = "GitHub {} {} failed (HTTP {}) using {}".format(
+            method, urlsplit(url).path, error.code, self.credential_name)
+        try:
+            response = json.loads(error.read(8192))
+            message = response.get("message") if isinstance(response, dict) else None
+            if isinstance(message, str):
+                detail += ": " + " ".join(message.split())
+        except (ValueError, OSError):
+            pass
+        finally:
+            error.close()
+        permissions = error.headers.get("X-Accepted-GitHub-Permissions") if error.headers else None
+        if permissions:
+            detail += ". Endpoint permissions: " + " ".join(permissions.split())
+        secrets = {self.token, os.environ.get("SOURCE_GITHUB_TOKEN"), os.environ.get("NIKSTORE_TOKEN")}
+        for secret in sorted((value for value in secrets if value), key=len, reverse=True):
+            detail = detail.replace(secret, "[REDACTED]")
+        detail = re.sub(r"\b(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]+", "[REDACTED]", detail)
+        error.nikstore_message = detail[:1500]
 
     def request(self, method, path, payload=None, allow_missing=False):
         url = "https://api.github.com" + path
@@ -63,7 +87,9 @@ class GitHub:
                 return json.loads(body) if body else None
         except HTTPError as error:
             if error.code == 404 and allow_missing:
+                error.close()
                 return None
+            self.record_http_error(error, method, url)
             raise
 
     def headers(self):
@@ -81,8 +107,12 @@ class GitHub:
             "https://api.github.com/repos/{}/releases/assets/{}".format(repository, asset_id),
             headers=headers,
         )
-        with self.opener.open(request, timeout=120) as response, destination.open("wb") as output:
-            shutil.copyfileobj(response, output)
+        try:
+            with self.opener.open(request, timeout=120) as response, destination.open("wb") as output:
+                shutil.copyfileobj(response, output)
+        except HTTPError as error:
+            self.record_http_error(error, "GET", request.full_url)
+            raise
 
     def upload(self, upload_url, apk, name):
         url = upload_url.split("{", 1)[0] + "?" + urlencode({"name": name})
@@ -91,10 +121,14 @@ class GitHub:
         headers = self.headers()
         headers.update({"Content-Type": "application/vnd.android.package-archive",
                         "Content-Length": str(apk.stat().st_size)})
-        with apk.open("rb") as stream:
-            request = Request(url, data=stream, method="POST", headers=headers)
-            with self.opener.open(request, timeout=120) as response:
-                return json.load(response)
+        try:
+            with apk.open("rb") as stream:
+                request = Request(url, data=stream, method="POST", headers=headers)
+                with self.opener.open(request, timeout=120) as response:
+                    return json.load(response)
+        except HTTPError as error:
+            self.record_http_error(error, "POST", url)
+            raise
 
 
 def find_android_tool(name):
@@ -317,8 +351,8 @@ def main():
     registry = json.loads((ROOT / "integrations/apps.json").read_text())
     if repository not in registry:
         raise PublishError("Source repository is not registered in integrations/apps.json")
-    source = GitHub(os.environ.get("SOURCE_GITHUB_TOKEN"))
-    destination = GitHub(os.environ.get("NIKSTORE_TOKEN"))
+    source = GitHub(os.environ.get("SOURCE_GITHUB_TOKEN"), "SOURCE_GITHUB_TOKEN (source repository GITHUB_TOKEN)")
+    destination = GitHub(os.environ.get("NIKSTORE_TOKEN"), "NIKSTORE_PUBLISH_TOKEN")
     if event.get("release"):
         endpoint = "/repos/{}/releases/{}".format(repository, int(event["release"]["id"]))
     else:
@@ -335,8 +369,9 @@ if __name__ == "__main__":
     try:
         main()
     except HTTPError as error:
-        print("GitHub request failed (HTTP {}). Check repository permissions and release state."
-              .format(error.code), file=sys.stderr)
+        print(getattr(error, "nikstore_message", "GitHub request failed (HTTP {}). "
+                      "Check repository permissions and release state.".format(error.code)),
+              file=sys.stderr)
         sys.exit(1)
     except (PublishError, ValueError, KeyError, OSError) as error:
         print(str(error), file=sys.stderr)
