@@ -16,12 +16,31 @@ The release connection works as follows:
    version code `2`, and updates `distribution/catalog.json` on `main`.
 4. The catalog commit triggers the Pages workflow. Only `catalog.json` and
    `index.html` are published to Pages; draft records are excluded.
-5. NikStore fetches the catalog when opened, when Refresh is tapped, and every
-   minute while its screen is open. It shows available and installed versions,
-   update status, and release notes. A valid catalog is saved for offline use.
+5. NikStore shows the saved catalog when opened. Tap **Refresh** to fetch it, or
+   enable **Settings > Release notifications** for a daily background check.
+   It shows available and installed versions, update status, and release notes.
+   A valid catalog is saved for offline use.
 
-APK installation, background notifications, and push messaging are subsequent
-features. This change connects publishing to the version shown on the phone.
+APK installation and push messaging are subsequent features.
+
+## Daily release notifications
+
+Release notifications are off by default. When enabled, Android WorkManager
+checks the catalog around **23:00 in the device's local time zone**, including
+after a reboot. The schedule adjusts when the clock or time zone changes.
+Android can delay work to save battery or wait for a network connection; 23:00
+is a target rather than an exact alarm.
+
+Each nightly window gets one automatic attempt, with no repeated network retries
+on failure. The app remembers version codes and announces each newer release
+once. If no catalog has been saved yet, the first successful check establishes
+a baseline. Notifications skip incompatible apps and versions already installed.
+Tapping an alert opens that app's release details.
+
+Turning the setting off cancels scheduled work and release alerts. Opening the
+app then reads only its saved catalog; it makes no automatic update requests.
+**Refresh** remains an explicit manual check. Android notification permission is
+also required; blocked notifications prevent background fetching.
 
 The trigger runs on GitHub's servers after a GitHub release is published. The
 workflow file must be committed to the private JspTime repository before that

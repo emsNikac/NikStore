@@ -47,7 +47,7 @@
         </LinearLayout>
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/refresh_button"
+            android:id="@+id/settings_button"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
@@ -57,10 +57,10 @@
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:padding="12dp"
-            android:contentDescription="@string/refresh"
+            android:contentDescription="@string/settings"
             app:backgroundTint="@color/store_primary_container"
             app:cornerRadius="16dp"
-            app:icon="@drawable/ic_refresh"
+            app:icon="@drawable/ic_settings"
             app:iconTint="@color/store_on_primary_container"
             app:iconPadding="0dp"
             app:iconSize="24dp"
@@ -94,9 +94,19 @@
             android:layout_weight="1"
             android:drawablePadding="6dp"
             android:accessibilityLiveRegion="polite"
-            android:text="@string/catalog_refreshing"
+            android:text="@string/catalog_automatic_off"
             android:textColor="@color/store_text_secondary"
             android:textSize="13sp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/refresh_button"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:layout_marginStart="4dp"
+            android:text="@string/refresh"
+            app:icon="@drawable/ic_refresh"
+            app:iconSize="18dp" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/retry_button"
             style="@style/Widget.Material3.Button.TextButton"

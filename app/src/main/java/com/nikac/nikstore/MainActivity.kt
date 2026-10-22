@@ -1,12 +1,13 @@
 package com.nikac.nikstore
 
+import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.text.format.DateUtils
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -20,6 +21,7 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.widget.NestedScrollView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.progressindicator.LinearProgressIndicator
@@ -27,14 +29,17 @@ import com.nikac.nikstore.catalog.AppState
 import com.nikac.nikstore.catalog.CatalogApp
 import com.nikac.nikstore.catalog.CatalogRepository
 import com.nikac.nikstore.catalog.CatalogUnavailableException
+import com.nikac.nikstore.updates.DailyReleaseScheduler
+import com.nikac.nikstore.updates.ReleaseNotifications
+import com.nikac.nikstore.updates.ReleaseSettings
 import java.util.Locale
 import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
     private val worker = Executors.newSingleThreadExecutor()
-    private val handler = Handler(Looper.getMainLooper())
     private val expandedApps = mutableSetOf<String>()
     private lateinit var repository: CatalogRepository
+    private lateinit var releaseSettings: ReleaseSettings
     private lateinit var cards: LinearLayout
     private lateinit var status: TextView
     private lateinit var count: TextView
@@ -43,12 +48,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var retryButton: MaterialButton
     private lateinit var progress: LinearProgressIndicator
     private var refreshing = false
+    private var cacheLoaded = false
     private var apps: List<CatalogApp>? = null
     private var loadError: Int? = null
-    private val periodicRefresh = object : Runnable {
-        override fun run() {
-            refresh()
-            handler.postDelayed(this, REFRESH_INTERVAL_MS)
+    private val catalogChanges = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == ReleaseSettings.LAST_CATALOG_CHECK) {
+            runOnUiThread { if (!refreshing && !isDestroyed) loadCachedCatalog() }
         }
     }
 
@@ -70,6 +75,7 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightNavigationBars = lightTheme
         }
         repository = CatalogRepository(applicationContext, BuildConfig.CATALOG_URL)
+        releaseSettings = ReleaseSettings(this)
         cards = findViewById(R.id.app_cards)
         status = findViewById(R.id.catalog_status)
         count = findViewById(R.id.app_count)
@@ -77,8 +83,12 @@ class MainActivity : AppCompatActivity() {
         refreshButton = findViewById(R.id.refresh_button)
         retryButton = findViewById(R.id.retry_button)
         progress = findViewById(R.id.catalog_progress)
-        refreshButton.setOnClickListener { refresh(userInitiated = true) }
-        retryButton.setOnClickListener { refresh(userInitiated = true) }
+        refreshButton.setOnClickListener { refresh() }
+        retryButton.setOnClickListener { refresh() }
+        findViewById<MaterialButton>(R.id.settings_button).apply {
+            setOnClickListener { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) }
+            TooltipCompat.setTooltipText(this, getString(R.string.settings))
+        }
         TooltipCompat.setTooltipText(refreshButton, getString(R.string.refresh))
         ViewCompat.setAccessibilityHeading(findViewById(R.id.collection_heading), true)
     }
@@ -90,34 +100,68 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        renderApps()
-        refresh()
-        handler.postDelayed(periodicRefresh, REFRESH_INTERVAL_MS)
+        if (releaseSettings.enabled && !ReleaseNotifications.allowed(this)) DailyReleaseScheduler.disable(this)
+        DailyReleaseScheduler.sync(this)
+        loadCachedCatalog()
     }
 
-    override fun onPause() {
-        handler.removeCallbacks(periodicRefresh)
-        super.onPause()
+    override fun onStart() {
+        super.onStart()
+        releaseSettings.preferences.registerOnSharedPreferenceChangeListener(catalogChanges)
+    }
+
+    override fun onStop() {
+        releaseSettings.preferences.unregisterOnSharedPreferenceChangeListener(catalogChanges)
+        super.onStop()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        loadCachedCatalog()
     }
 
     override fun onDestroy() {
+        repository.cancel()
         worker.shutdownNow()
         super.onDestroy()
     }
 
-    private fun refresh(userInitiated: Boolean = false) {
+    private fun loadCachedCatalog() {
+        if (refreshing || isDestroyed) return
+        worker.execute {
+            val saved = repository.cached()
+            runOnUiThread {
+                if (isDestroyed || refreshing) return@runOnUiThread
+                cacheLoaded = true
+                apps = saved
+                loadError = null
+                renderApps()
+                when {
+                    !releaseSettings.enabled -> showStatus(R.string.catalog_automatic_off)
+                    releaseSettings.lastCatalogCheck == 0L -> showStatus(R.string.catalog_daily_enabled)
+                    else -> {
+                        val relative = DateUtils.getRelativeTimeSpanString(releaseSettings.lastCatalogCheck,
+                            System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
+                        showStatusText(getString(R.string.catalog_last_checked, relative), R.drawable.ic_check)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun refresh() {
         if (refreshing) return
         refreshing = true
         refreshButton.isEnabled = false
         retryButton.isEnabled = false
-        // Automatic checks leave the collection and its status quiet while browsing.
-        if (userInitiated || apps == null) {
-            progress.visibility = View.VISIBLE
-            showStatus(R.string.catalog_refreshing)
-            if (apps == null) {
-                loadError = null
-                renderEmptyState()
-            }
+        // This is an explicit user action. Automatic network access belongs only
+        // to the opted-in daily worker, never to activity lifecycle callbacks.
+        progress.visibility = View.VISIBLE
+        showStatus(R.string.catalog_refreshing)
+        if (apps == null) {
+            loadError = null
+            renderEmptyState()
         }
         val restoreCached = apps == null
         worker.execute {
@@ -126,6 +170,7 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread {
                         if (!isDestroyed) {
                             apps = saved
+                            cacheLoaded = true
                             renderApps()
                             showStatus(R.string.catalog_saved)
                         }
@@ -135,16 +180,15 @@ class MainActivity : AppCompatActivity() {
             val result = runCatching { repository.refresh() }
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
-                refreshing = false
-                refreshButton.isEnabled = true
-                retryButton.isEnabled = true
                 progress.visibility = View.INVISIBLE
                 result.fold(
                     onSuccess = { loaded ->
                         loadError = null
                         val changed = apps != loaded
                         apps = loaded
+                        cacheLoaded = true
                         if (changed) renderApps() else renderEmptyState()
+                        releaseSettings.catalogChecked()
                         showStatus(R.string.catalog_current, R.drawable.ic_check)
                     },
                     onFailure = { error ->
@@ -157,12 +201,18 @@ class MainActivity : AppCompatActivity() {
                         renderEmptyState()
                     },
                 )
+                refreshing = false
+                refreshButton.isEnabled = true
+                retryButton.isEnabled = true
             }
         }
     }
 
     private fun showStatus(message: Int, icon: Int = 0, error: Boolean = false) {
-        val text = getString(message)
+        showStatusText(getString(message), icon, error)
+    }
+
+    private fun showStatusText(text: String, icon: Int = 0, error: Boolean = false) {
         if (status.text.toString() != text) status.text = text
         val color = ContextCompat.getColor(this, if (error) R.color.store_error else R.color.store_text_secondary)
         status.setTextColor(color)
@@ -171,6 +221,7 @@ class MainActivity : AppCompatActivity() {
         }
         status.setCompoundDrawablesRelativeWithIntrinsicBounds(drawable, null, null, null)
         retryButton.visibility = if (error) View.VISIBLE else View.GONE
+        refreshButton.visibility = if (error) View.GONE else View.VISIBLE
     }
 
     private fun renderEmptyState() {
@@ -178,12 +229,12 @@ class MainActivity : AppCompatActivity() {
         val failed = apps == null && loadError != null
         findViewById<TextView>(R.id.empty_title).setText(when {
             failed -> R.string.catalog_error_title
-            apps == null -> R.string.catalog_loading_title
+            apps == null && (!cacheLoaded || refreshing) -> R.string.catalog_loading_title
             else -> R.string.catalog_empty_title
         })
         findViewById<TextView>(R.id.empty_description).setText(when {
             failed -> loadError!!
-            apps == null -> R.string.catalog_loading
+            apps == null && (!cacheLoaded || refreshing) -> R.string.catalog_loading
             else -> R.string.catalog_empty
         })
     }
@@ -195,6 +246,8 @@ class MainActivity : AppCompatActivity() {
         count.text = resources.getQuantityString(R.plurals.catalog_app_count, appCount, appCount)
         renderEmptyState()
         apps.orEmpty().forEach { app ->
+            val notificationTarget = intent.getStringExtra(ReleaseNotifications.EXTRA_PACKAGE) == app.packageName
+            if (notificationTarget) expandedApps.add(app.packageName)
             val card = layoutInflater.inflate(R.layout.item_catalog_app, cards, false) as MaterialCardView
             card.findViewById<TextView>(R.id.card_name).apply {
                 text = app.name
@@ -261,6 +314,10 @@ class MainActivity : AppCompatActivity() {
             }
             updateDetails()
             cards.addView(card)
+            if (notificationTarget) {
+                card.post { findViewById<NestedScrollView>(R.id.catalog_scroll).smoothScrollTo(0, card.top) }
+                intent.removeExtra(ReleaseNotifications.EXTRA_PACKAGE)
+            }
         }
     }
 
@@ -278,7 +335,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private companion object {
-        const val REFRESH_INTERVAL_MS = 60_000L
         const val EXPANDED_APPS = "expanded_apps"
     }
 }
