@@ -3,17 +3,17 @@
   "apps": [
     {
       "packageName": "mk.jsp.live",
-      "versionName": "3.0.0",
-      "versionCode": 3,
+      "versionName": "3.0.1",
+      "versionCode": 4,
       "minSdk": 26,
       "signingCertificateSha256": "cd6e36e6bffdf9d4b1580c236cecaf1f8163b788d4727303d6e9bfdacbef688f",
       "name": "JspTime",
       "description": "An unofficial, ad-free Android app for Skopje public transport, with live buses, stations, and arrival estimates.",
-      "apkUrl": "https://github.com/emsNikac/NikStore/releases/download/jsptime-3/jsptime-3.apk",
-      "sha256": "d6ce0952e5a7123322f11b40c747eba998618fc26ecddf3d70bdf4a5e81bc923",
-      "releaseNotes": "JspTime 3.0.0\r\n\r\n- Map is changed to MapLibre instead of Google Maps.",
-      "publishedAt": "2026-10-22T23:25:16Z",
-      "sizeBytes": 51552907
+      "apkUrl": "https://github.com/emsNikac/NikStore/releases/download/jsptime-4/jsptime-4.apk",
+      "sha256": "a67a101a62b48f97cad0427384828d38484825a5b9cdbb19d6b23ba841d92c30",
+      "releaseNotes": "JspTime 3.0.1\r\n\r\n- Fixed incoming bus notification bugs.",
+      "publishedAt": "2026-11-06T19:43:36Z",
+      "sizeBytes": 51570544
     }
   ]
 }
