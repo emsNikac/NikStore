@@ -11,8 +11,8 @@
       "description": "An unofficial, ad-free Android app for Skopje public transport, with live buses, stations, and arrival estimates.",
       "apkUrl": "https://github.com/emsNikac/NikStore/releases/download/jsptime-4/jsptime-4.apk",
       "sha256": "a67a101a62b48f97cad0427384828d38484825a5b9cdbb19d6b23ba841d92c30",
-      "releaseNotes": "JspTime 3.0.1\r\n\r\n- Fixed incoming bus notification bugs.",
-      "publishedAt": "2026-11-06T19:43:36Z",
+      "releaseNotes": "JspTime 3.0.1\r\n\r\n- Fixed the notification bug for incoming bus.",
+      "publishedAt": "2026-11-06T19:58:51Z",
       "sizeBytes": 51570544
     }
   ]
